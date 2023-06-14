@@ -95,7 +95,20 @@ app.get("/user/tweets/feed/", authentication, async (request, response) => {
   const getUsrID = `SELECT user_id FROM user WHERE username='${name}'`;
   const dbres = await db.get(getUsrID);
 
-  const getQuery = `SELECT username ,tweet,date_time AS dateTime FROM user NATURAL JOIN tweet ORDER BY date_time DESC LIMIT 4`;
+  const getQuery = `
+                    SELECT
+                        user.username, tweet.tweet, tweet.date_time AS dateTime
+                    FROM
+                            follower
+                            INNER JOIN tweet
+                            ON follower.following_user_id = tweet.user_id
+                             INNER JOIN user
+                            ON tweet.user_id = user.user_id
+                    WHERE
+                            follower.follower_user_id = ${dbres.user_id}
+                    ORDER BY
+                            tweet.date_time DESC
+                    LIMIT 4;`;
   const dbresponse = await db.all(getQuery);
   response.send(dbresponse);
 });
@@ -126,7 +139,7 @@ app.get("/user/followers/", authentication, async (request, response) => {
 //API 6
 app.get("/tweets/:tweetId/", authentication, async (request, response) => {
   const { tweetId } = request.params;
-  const selectUser = `SELECT * FROM user NATURAL JOIN tweet WHERE tweet.tweet_id=${tweetId}`;
+  const selectUser = `SELECT * FROM tweet WHERE tweet.tweet_id=${tweetId}`;
   const dbuser = await db.get(selectUser);
   //   response.send(dbuser);
   if (dbuser === undefined) {
